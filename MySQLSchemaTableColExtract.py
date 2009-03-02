@@ -41,14 +41,14 @@ def get_create_table_commands(l_commands):
 def get_table_name(create_command):
     # dumb function, assumes table name is the 3rd word in the command
     words = create_command.split()
-    table_name = words[2]
+    table_name = words[2].strip("`") # the strip here is to make it easier to use the string later
     return table_name
 
 def get_table_names(l_create_tables):
     l_table_names = []
     for command in l_create_tables:
         table_name = get_table_name(command)
-        l_table_names.append(table_name)
+        l_table_names.append(table_name.strip("`")) # the strip here is to make it easier to use the string later
     return l_table_names
 
 def get_col_names(create_command):
@@ -61,7 +61,7 @@ def get_col_names(create_command):
     # deal with the first col
     first_col_part = first_part.split("(")[1] # CREATE TABLE 'name' ( this bit here
     first_col = first_col_part.split()[0]
-    l_cols.append(first_col)
+    l_cols.append(first_col.strip("`"))
     # 
     # deal with the other cols
     # want to stop processing if the command line has got any of the following:
@@ -75,7 +75,7 @@ def get_col_names(create_command):
     x = 0
     while (not mysql_keys.search(current_col_candidate) )and (x != command_length):
         col = col_parts[x].split()[0]
-        l_cols.append(col)  
+        l_cols.append(col.strip("`"))  
 
         # stop overrunning the end of the cols index
         if x < command_length - 1:
@@ -99,6 +99,11 @@ def get_table_cols_dict(l_create_tables):
         table_cols[table_name] = cols
     return table_cols
         
+def gen_select_query(table,cols):
+    query_cols = ",".join(cols)
+    query = "select " + query_cols + " from " + table
+    print query
+        
 def main():
     file_ob = sys.argv[1]
     schema = read_file(file_ob)
@@ -106,8 +111,10 @@ def main():
     schema_no_neline = strip_newlines(schema_no_comments)
     l_commands = parse_commands(schema_no_neline)
     l_create_tables = get_create_table_commands(l_commands)
-    table_cols = get_table_cols_dict(l_create_tables)
-    print table_cols
+    table_cols_dict = get_table_cols_dict(l_create_tables)
+    for table in table_cols_dict.keys():
+        gen_select_query(table,table_cols_dict[table])
+
 
 if __name__ == "__main__":
     main()
